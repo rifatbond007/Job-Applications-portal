@@ -1,0 +1,12 @@
+target
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+README.md
+**/test
+**/tests
+*.test.*
+.github

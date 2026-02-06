@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Docs and config not needed in image
+*.md
+.env.example
+.marscode
+.vscode
+.idea
+
+# Dependencies (reinstalled in build)
+node_modules
+target
+
+# Local env
+.env
+.env.*
+
+# Tests
+**/tests
+**/test
+*.test.*
+__tests__
+
+# CI
+.github
