@@ -1,208 +1,126 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { Briefcase, ChevronDown, User, Shield, LogIn } from "lucide-react";
+import { 
+  Briefcase, 
+  ChevronDown, 
+  User, 
+  Shield, 
+  LogIn, 
+  LayoutDashboard, 
+  FileText, 
+  Zap, 
+  Users, 
+  BarChart3 
+} from "lucide-react";
 import { Button } from "../ui/button";
+import { cn } from "@/lib/utils"; // Assuming you have a utility for tailwind classes
 
 export function LandingNavbar() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
-  const handleMouseEnter = (menu: string) => {
-    setActiveDropdown(menu);
-  };
-
-  const handleMouseLeave = () => {
-    setActiveDropdown(null);
-  };
+  const navLinks = [
+    {
+      id: "job-seeker",
+      label: "For Job Seekers",
+      icon: <User className="h-4 w-4" />,
+      items: [
+        { title: "Dashboard", sub: "Track your progress", href: "/job-seeker", icon: <LayoutDashboard className="h-4 w-4" /> },
+        { title: "Resume Manager", sub: "AI-optimized CVs", href: "/job-seeker/resume", icon: <FileText className="h-4 w-4" /> },
+        { title: "AI Assistant", sub: "Interview coaching", href: "/job-seeker/ai-assistant", icon: <Zap className="h-4 w-4" /> },
+      ]
+    },
+    {
+      id: "job-poster",
+      label: "For Employers",
+      icon: <Briefcase className="h-4 w-4" />,
+      items: [
+        { title: "Employer Hub", sub: "Manage your hiring", href: "/job-poster", icon: <LayoutDashboard className="h-4 w-4" /> },
+        { title: "Candidates", sub: "Review applications", href: "/job-poster/candidates", icon: <Users className="h-4 w-4" /> },
+        { title: "Analytics", sub: "Data-driven hiring", href: "/job-poster/analytics", icon: <BarChart3 className="h-4 w-4" /> },
+      ]
+    },
+    {
+      id: "admin",
+      label: "Admin",
+      icon: <Shield className="h-4 w-4" />,
+      items: [
+        { title: "System Monitor", sub: "Global oversight", href: "/admin", icon: <Shield className="h-4 w-4" /> },
+        { title: "AI Usage", sub: "Resource monitoring", href: "/admin/ai-monitor", icon: <Zap className="h-4 w-4" /> },
+      ]
+    }
+  ];
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center gap-2 font-semibold text-xl text-gray-900 hover:text-blue-600 transition-colors"
-          >
-            <Briefcase className="h-6 w-6 text-blue-600" />
-            <span>JobTracker AI</span>
+          
+          {/* Brand Logo */}
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="bg-indigo-600 p-1.5 rounded-lg group-hover:bg-indigo-700 transition-colors">
+              <Briefcase className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight text-slate-900">
+              JobTracker<span className="text-indigo-600">AI</span>
+            </span>
           </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-8">
-            <Link
-              to="/"
-              className="text-gray-700 hover:text-blue-600 transition-colors"
-            >
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center gap-4">
+            <Link to="/jobs" className="text-sm font-medium text-slate-600 hover:text-indigo-600 px-3 py-2 transition-colors">
               Find Jobs
             </Link>
 
-            {/* Admin Portal Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => handleMouseEnter("admin")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                className="flex items-center gap-1 text-gray-700 hover:text-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 rounded px-2 py-1"
-                aria-expanded={activeDropdown === "admin"}
-                aria-haspopup="true"
+            {navLinks.map((menu) => (
+              <div
+                key={menu.id}
+                className="relative"
+                onMouseEnter={() => setActiveDropdown(menu.id)}
+                onMouseLeave={() => setActiveDropdown(null)}
               >
-                <Shield className="h-4 w-4" />
-                <span>Admin</span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
+                <button
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-md transition-all",
+                    activeDropdown === menu.id ? "text-indigo-600 bg-slate-50" : "text-slate-600 hover:text-indigo-600"
+                  )}
+                >
+                  {menu.label}
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", activeDropdown === menu.id && "rotate-180")} />
+                </button>
 
-              {activeDropdown === "admin" && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link
-                    to="/admin"
-                    className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                  >
-                    <Shield className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">Admin Dashboard</div>
-                      <div className="text-xs text-gray-500">
-                        System oversight & analytics
-                      </div>
+                {/* Dropdown Menu */}
+                {activeDropdown === menu.id && (
+                  <div className="absolute top-full left-0 pt-2 w-64 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden p-2">
+                      {menu.items.map((item) => (
+                        <Link
+                          key={item.title}
+                          to={item.href}
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                        >
+                          <div className="mt-0.5 text-slate-400 group-hover:text-indigo-600">
+                            {item.icon}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                            <div className="text-xs text-slate-500 leading-snug">{item.sub}</div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <Link
-                    to="/admin/users"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                  >
-                    User Management
-                  </Link>
-                  <Link
-                    to="/admin/jobs"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                  >
-                    Job Listings Oversight
-                  </Link>
-                  <Link
-                    to="/admin/ai-monitor"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                  >
-                    AI Usage Monitor
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Job Seeker Portal Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => handleMouseEnter("job-seeker")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                className="flex items-center gap-1 text-gray-700 hover:text-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
-                aria-expanded={activeDropdown === "job-seeker"}
-                aria-haspopup="true"
-              >
-                <User className="h-4 w-4" />
-                <span>Job Seeker</span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-
-              {activeDropdown === "job-seeker" && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link
-                    to="/job-seeker"
-                    className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                  >
-                    <User className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">Job Seeker Dashboard</div>
-                      <div className="text-xs text-gray-500">
-                        Track applications & get AI help
-                      </div>
-                    </div>
-                  </Link>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <Link
-                    to="/job-seeker/applications"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                  >
-                    My Applications
-                  </Link>
-                  <Link
-                    to="/job-seeker/resume"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                  >
-                    Resume Manager
-                  </Link>
-                  <Link
-                    to="/job-seeker/ai-assistant"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                  >
-                    AI Career Assistant
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Job Poster/Employer Portal Dropdown */}
-            <div
-              className="relative"
-              onMouseEnter={() => handleMouseEnter("job-poster")}
-              onMouseLeave={handleMouseLeave}
-            >
-              <button
-                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
-                aria-expanded={activeDropdown === "job-poster"}
-                aria-haspopup="true"
-              >
-                <Briefcase className="h-4 w-4" />
-                <span>Employers</span>
-                <ChevronDown className="h-4 w-4" />
-              </button>
-
-              {activeDropdown === "job-poster" && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Link
-                    to="/job-poster"
-                    className="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
-                    <Briefcase className="h-4 w-4" />
-                    <div>
-                      <div className="font-medium">Employer Dashboard</div>
-                      <div className="text-xs text-gray-500">
-                        Post jobs & review candidates
-                      </div>
-                    </div>
-                  </Link>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <Link
-                    to="/job-poster/jobs"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
-                    Job Listings
-                  </Link>
-                  <Link
-                    to="/job-poster/candidates"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
-                    Candidate Applications
-                  </Link>
-                  <Link
-                    to="/job-poster/analytics"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
-                    Hiring Analytics
-                  </Link>
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" className="hidden sm:flex">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-600 hover:text-indigo-600">
               <LogIn className="h-4 w-4 mr-2" />
               Sign In
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-100 px-5">
               Get Started
             </Button>
           </div>
