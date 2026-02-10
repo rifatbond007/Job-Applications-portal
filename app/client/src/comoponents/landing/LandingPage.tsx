@@ -1,25 +1,5 @@
-/**
- * Landing Page - Job Application Portal
- * 
- * A high-fidelity, production-ready landing page featuring:
- * - Hero section with value proposition and quick search
- * - Paginated job feed with advanced filtering
- * - Application sidebar with React Hook Form + Zod validation
- * - Status tracker for returning users
- * - Full accessibility (ARIA labels, keyboard navigation)
- * - Performance optimizations (memo, skeleton loaders)
- * - LocalStorage persistence for drafts and saved jobs
- * 
- * Architecture:
- * - Atomic Design: Separate atoms, molecules, and organisms
- * - Form Management: React Hook Form with Zod schema validation
- * - State Persistence: Draft applications and saved jobs in localStorage
- * - Performance: Memoized components, optimized re-renders
- * - Accessibility: Full keyboard navigation, ARIA labels, focus management
- */
-
 import { useState, useEffect, useMemo } from "react";
-import { Sparkles, TrendingUp, Shield, Zap, Briefcase } from "lucide-react";
+import { Sparkles, Zap, Briefcase, ChevronRight, Cpu } from "lucide-react";
 import { LandingNavbar } from "./LandingNavbar";
 import { SearchBar } from "./SearchBar";
 import { JobCard } from "./JobCard";
@@ -29,6 +9,7 @@ import { StatusTracker } from "./StatusTracker";
 import { Button } from "../ui/button";
 import { EmptyState } from "../EmptyState";
 import { MOCK_JOBS, type JobListing } from "../../data/mockJobs";
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -41,7 +22,6 @@ export function LandingPage() {
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [isApplicationOpen, setIsApplicationOpen] = useState(false);
 
-  // Mock user applications for status tracker
   const mockApplications = [
     {
       jobTitle: "Senior Frontend Engineer",
@@ -58,306 +38,191 @@ export function LandingPage() {
     },
   ];
 
-  // Simulate initial loading
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Filter jobs based on search criteria
   const filteredJobs = useMemo(() => {
     return MOCK_JOBS.filter((job) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        job.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesDepartment =
-        selectedDepartment === "All Departments" ||
-        job.department === selectedDepartment;
-
-      const matchesLocationType =
-        selectedLocationType === "All Types" ||
-        job.locationType === selectedLocationType;
-
+      const matchesSearch = searchTerm === "" || 
+        [job.title, job.company, job.description].some(field => 
+          field.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      const matchesDepartment = selectedDepartment === "All Departments" || job.department === selectedDepartment;
+      const matchesLocationType = selectedLocationType === "All Types" || job.locationType === selectedLocationType;
       return matchesSearch && matchesDepartment && matchesLocationType;
     });
   }, [searchTerm, selectedDepartment, selectedLocationType]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
-  const paginatedJobs = filteredJobs.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+  const paginatedJobs = filteredJobs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSearch = () => {
     setCurrentPage(1);
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 500);
+    setTimeout(() => {
+      setIsLoading(false);
+      document.getElementById('job-feed')?.scrollIntoView({ behavior: 'smooth' });
+    }, 500);
   };
 
   const handleApply = (jobId: string) => {
     const job = MOCK_JOBS.find((j) => j.id === jobId);
-    if (job) {
-      setSelectedJob(job);
-      setIsApplicationOpen(true);
-    }
+    if (job) { setSelectedJob(job); setIsApplicationOpen(true); }
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 400, behavior: "smooth" });
+    document.getElementById('job-feed')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#fafafa] font-sans text-slate-900 selection:bg-indigo-100">
       <LandingNavbar />
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
-              <Sparkles className="h-4 w-4 text-yellow-300" />
-              <span className="text-sm">AI-Powered Job Matching</span>
-            </div>
-            <h1 className="text-5xl md:text-6xl mb-6 max-w-4xl mx-auto">
-              Find Your Dream Job with{" "}
-              <span className="text-yellow-300">AI Assistance</span>
-            </h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-              Join thousands of job seekers and employers using our intelligent
-              platform to make smarter hiring decisions.
-            </p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
-              <div>
-                <div className="text-4xl font-bold text-yellow-300">10K+</div>
-                <div className="text-blue-200">Active Jobs</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-yellow-300">50K+</div>
-                <div className="text-blue-200">Job Seekers</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold text-yellow-300">2K+</div>
-                <div className="text-blue-200">Companies</div>
-              </div>
-            </div>
+      {/* FULL SCREEN HERO: 100vh */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-white">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03]" 
+             style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        
+        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 mb-8 animate-in fade-in slide-in-from-top-4 duration-1000">
+            <div className="w-2 h-2 rounded-full bg-slate-950 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">v2.0 Career Engine Live</span>
           </div>
 
-          {/* Search Bar */}
-          <SearchBar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedDepartment={selectedDepartment}
-            onDepartmentChange={setSelectedDepartment}
-            selectedLocationType={selectedLocationType}
-            onLocationTypeChange={setSelectedLocationType}
-            onSearch={handleSearch}
-          />
-        </div>
-      </section>
+          <h1 className="text-6xl md:text-7xl font-black text-slate-950 tracking-tight leading-[0.95] mb-8">
+            The intelligent way <br />
+            <span className="text-slate-300">to land your next </span>
+            <span className="relative">
+              big role.
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 6C50 2 150 2 198 6" stroke="#020617" strokeWidth="4" strokeLinecap="round"/>
+              </svg>
+            </span>
+          </h1>
 
-      {/* Features Banner */}
-      <section className="bg-white border-b py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Sparkles className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">AI-Powered Matching</h3>
-                <p className="text-sm text-gray-600">
-                  Smart algorithms match you with perfect opportunities
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Real-time Tracking</h3>
-                <p className="text-sm text-gray-600">
-                  Monitor your application status in real-time
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Shield className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Verified Employers</h3>
-                <p className="text-sm text-gray-600">
-                  All companies are verified for your safety
-                </p>
-              </div>
-            </div>
+          <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-12 font-medium">
+            Stop searching, start matching. Our algorithmic feed prioritizes roles based on your verified skills and actual career growth potential.
+          </p>
+
+          {/* Centered Search Integration with shadow for depth */}
+          <div className="w-full max-w-4xl mx-auto p-1 bg-white border border-slate-200 rounded-2xl shadow-lg shadow-slate-200/40 scale-100 md:scale-105">
+            <SearchBar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              selectedDepartment={selectedDepartment}
+              onDepartmentChange={setSelectedDepartment}
+              selectedLocationType={selectedLocationType}
+              onLocationTypeChange={setSelectedLocationType}
+              onSearch={handleSearch}
+            />
+          </div>
+
+          {/* Animated Scroll Indicator */}
+          <div className="absolute bottom-10 flex flex-col items-center gap-2 opacity-30">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-950">Explore Jobs</span>
+            <div className="w-px h-12 bg-gradient-to-b from-slate-950 to-transparent" />
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Job Listings */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                  {isLoading ? "Loading jobs..." : `${filteredJobs.length} Jobs Found`}
+      {/* Content Feed with Left-Aligned Sidebar Layout */}
+      <main id="job-feed" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
+        <div className="flex flex-col lg:flex-row gap-16">
+          
+          {/* LEFT SIDEBAR: Tracker & Navigation */}
+          <aside className="lg:w-80 shrink-0">
+            <div className="sticky top-28 space-y-8">
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Dashboard</h4>
+                <div className="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
+                  <StatusTracker applications={mockApplications} />
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-950 rounded-[2rem] text-white shadow-xl shadow-slate-200 group relative overflow-hidden">
+                <div className="relative z-10">
+                  <Cpu className="h-8 w-8 mb-4 text-slate-400" />
+                  <h4 className="text-lg font-bold mb-2">Skill Analysis</h4>
+                  <p className="text-slate-400 text-xs mb-6 leading-relaxed">Let AI scan your LinkedIn profile to find hidden opportunities.</p>
+                  <Button className="w-full bg-white text-slate-950 hover:bg-slate-100 font-bold rounded-xl border-none text-xs h-10">Run Scan</Button>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* MAIN LISTINGS */}
+          <div className="flex-1 space-y-10">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-8">
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                   Recent Openings
                 </h2>
-                <p className="text-gray-600 mt-1">
-                  Browse through the best opportunities
-                </p>
+                <div className="h-px w-12 bg-slate-200" />
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{filteredJobs.length} Results</span>
               </div>
             </div>
 
-            {/* Job Cards */}
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-6">
               {isLoading ? (
-                // Skeleton Loading
-                <>
-                  {[...Array(ITEMS_PER_PAGE)].map((_, index) => (
-                    <JobCardSkeleton key={index} />
-                  ))}
-                </>
+                Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => <JobCardSkeleton key={i} />)
               ) : paginatedJobs.length > 0 ? (
-                paginatedJobs.map((job) => (
-                  <JobCard key={job.id} job={job} onApply={handleApply} />
-                ))
+                paginatedJobs.map((job) => <JobCard key={job.id} job={job} onApply={handleApply} />)
               ) : (
-                <EmptyState
-                  icon={Zap}
-                  title="No jobs found"
-                  description="Try adjusting your search filters to find more opportunities"
-                />
+                <EmptyState icon={Zap} title="Nothing found" description="Try removing some filters to see more results." />
               )}
             </div>
 
             {/* Pagination */}
             {!isLoading && paginatedJobs.length > 0 && totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  aria-label="Previous page"
-                >
-                  Previous
-                </Button>
-
+              <div className="flex items-center justify-between pt-12 border-t border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Page {currentPage} of {totalPages}</p>
                 <div className="flex gap-2">
-                  {[...Array(totalPages)].map((_, index) => {
-                    const pageNum = index + 1;
-                    // Show first page, last page, current page, and pages around current
-                    if (
-                      pageNum === 1 ||
-                      pageNum === totalPages ||
-                      Math.abs(pageNum - currentPage) <= 1
-                    ) {
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={
-                            currentPage === pageNum
-                              ? "bg-blue-600 hover:bg-blue-700"
-                              : ""
-                          }
-                          aria-label={`Go to page ${pageNum}`}
-                          aria-current={currentPage === pageNum ? "page" : undefined}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    } else if (
-                      pageNum === currentPage - 2 ||
-                      pageNum === currentPage + 2
-                    ) {
-                      return (
-                        <span key={pageNum} className="px-2 py-2 text-gray-500">
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handlePageChange(currentPage - 1)} 
+                    disabled={currentPage === 1} 
+                    className="rounded-xl font-bold text-slate-600 h-10 px-6"
+                  >
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handlePageChange(currentPage + 1)} 
+                    disabled={currentPage === totalPages} 
+                    className="rounded-xl font-bold text-slate-600 h-10 px-6"
+                  >
+                    Next
+                  </Button>
                 </div>
-
-                <Button
-                  variant="outline"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  aria-label="Next page"
-                >
-                  Next
-                </Button>
               </div>
             )}
           </div>
-
-          {/* Sidebar - Status Tracker */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <StatusTracker applications={mockApplications} />
-            </div>
-          </div>
         </div>
-      </section>
+      </main>
 
-      {/* Application Sidebar */}
-      <ApplicationSidebar
-        isOpen={isApplicationOpen}
-        onClose={() => setIsApplicationOpen(false)}
-        job={selectedJob}
-      />
+      <ApplicationSidebar isOpen={isApplicationOpen} onClose={() => setIsApplicationOpen(false)} job={selectedJob} />
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Briefcase className="h-6 w-6 text-blue-400" />
-                <span className="text-xl font-semibold">JobTracker AI</span>
-              </div>
-              <p className="text-gray-400 mb-4">
-                The most advanced AI-powered job application tracking platform.
-                Find your dream job and manage your career journey with confidence.
-              </p>
+      {/* MINIMAL FOOTER */}
+      <footer className="bg-white border-t border-slate-100 py-20">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-950 rounded-lg flex items-center justify-center">
+              <Briefcase className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">For Job Seekers</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Browse Jobs</li>
-                <li>Resume Manager</li>
-                <li>AI Career Assistant</li>
-                <li>Application Tracker</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">For Employers</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Post Jobs</li>
-                <li>Find Candidates</li>
-                <li>AI Screening</li>
-                <li>Analytics Dashboard</li>
-              </ul>
-            </div>
+            <span className="font-black tracking-tighter text-xl text-slate-950">JobTracker</span>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>© 2026 JobTracker AI. All rights reserved. Powered by AI.</p>
+          
+          <div className="flex gap-10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <span className="hover:text-slate-950 cursor-pointer transition-colors">Platform</span>
+            <span className="hover:text-slate-950 cursor-pointer transition-colors">Company</span>
+            <span className="hover:text-slate-950 cursor-pointer transition-colors">Resources</span>
           </div>
+
+          <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">© 2026 GLOBAL TECH PARTNERS</p>
         </div>
       </footer>
     </div>
