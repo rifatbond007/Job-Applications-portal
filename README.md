@@ -2,7 +2,6 @@
 
 A full-stack job application tracking system with React frontend and Java Spring Boot backend.
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/88adc245-5cb7-42c6-8e47-803bff8a9ac8/deploy-status)](https://app.netlify.com/projects/applications-portal/deploys)
 
 ## Project Structure
 
