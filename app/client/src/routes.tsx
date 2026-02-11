@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 
 // Pages
 import { Home } from "./pages/Home";
+import { Auth } from "./pages/Auth";
 
 // Admin
 import { AdminLayout } from "./pages/admin/AdminLayout";
@@ -34,6 +35,10 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: Home,
+  },
+  {
+    path: "/auth",
+    Component: Auth,
   },
   // Admin Portal Routes
   {

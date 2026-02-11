@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Briefcase, ChevronDown, User, Shield, Users, ArrowRight } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 
 export function LandingNavbar() {
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -13,12 +12,6 @@ export function LandingNavbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const getStartedItems = [
-    { title: "Job Seeker", sub: "Apply & track jobs", href: "/job-seeker", icon: <User className="h-4 w-4" />, color: "text-slate-900 bg-slate-50" },
-    { title: "Job Poster", sub: "Hire top talent", href: "/job-poster", icon: <Users className="h-4 w-4" />, color: "text-slate-900 bg-slate-50" },
-    { title: "Admin", sub: "Platform control", href: "/admin", icon: <Shield className="h-4 w-4" />, color: "text-slate-900 bg-slate-50" },
-  ];
 
   return (
     <nav className={cn(
@@ -54,32 +47,11 @@ export function LandingNavbar() {
           </div>
 
           {/* Right Action Button with Dropdown */}
-          <div className="relative" onMouseEnter={() => setActiveDropdown("get-started")} onMouseLeave={() => setActiveDropdown(null)}>
+          <Link to="/auth">
             <Button className="rounded-full bg-slate-950 hover:bg-indigo-600 text-white font-bold h-11 px-6 shadow-xl shadow-slate-200 transition-all hover:scale-105 active:scale-95 border-none">
               Get Started
-              <ChevronDown className={cn("ml-2 h-4 w-4 transition-transform duration-300", activeDropdown === "get-started" && "rotate-180")} />
             </Button>
-
-            {activeDropdown === "get-started" && (
-              <div className="absolute right-0 mt-4 w-72 animate-in fade-in slide-in-from-top-3 duration-200">
-                <div className="rounded-[2rem] border border-slate-100 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-3 overflow-hidden">
-                  <div className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Select Portal</div>
-                  {getStartedItems.map((item) => (
-                    <Link key={item.title} to={item.href} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition group">
-                      <div className={cn("p-2.5 rounded-xl transition-colors shadow-sm", item.color)}>
-                        {item.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.title}</div>
-                        <div className="text-[11px] text-slate-500 font-medium">{item.sub}</div>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          </Link>
         </div>
       </div>
     </nav>
