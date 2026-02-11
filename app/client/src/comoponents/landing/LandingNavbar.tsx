@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Briefcase } from "lucide-react";
 import { Button } from "../ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 export function LandingNavbar() {
   const [scrolled, setScrolled] = useState(false);
