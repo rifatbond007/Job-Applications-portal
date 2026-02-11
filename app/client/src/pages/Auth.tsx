@@ -5,7 +5,7 @@ import { Button } from "../comoponents/ui/button";
 import { Input } from "../comoponents/ui/input";
 import { Label } from "../comoponents/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../comoponents/ui/tabs";
-import { cn } from "@/lib/utils"; // Assuming you have a cn utility
+import { cn } from "../lib/utils";
 
 export function Auth() {
   const [activeTab, setActiveTab] = useState("login");
