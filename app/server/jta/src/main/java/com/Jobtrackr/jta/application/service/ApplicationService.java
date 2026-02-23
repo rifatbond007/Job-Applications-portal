@@ -77,6 +77,9 @@ public void apply(UUID jobId) {
     if (alreadyApplied) {
         throw new BadRequestException("Already applied to this job");
     }
+    if (job.getStatus() != JobStatus.OPEN) {
+        throw new BadRequestException("Job is closed");
+    }
 
     // 6️⃣ Save application
     Application application = new Application();
@@ -86,25 +89,32 @@ public void apply(UUID jobId) {
     applicationRepository.save(application);
 }
 
-    public List<ApplicationResponse> getApplicationsForJob(UUID jobId,
-                                                           UUID recruiterId) {
+    public List<ApplicationResponse> getApplicationsForJob(UUID jobId) {
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        User recruiter = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        if (recruiter.getRole() != Role.RECRUITER) {
+            throw new UnauthorizedActionException("Only recruiters can view job applications");
+        }
 
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Job not found"));
 
-        // Verify recruiter owns job
-        if (!job.getRecruiter().getId().equals(recruiterId)) {
-            throw new UnauthorizedActionException("Unauthorized access");
+        if (!job.getRecruiter().getId().equals(recruiter.getId())) {
+            throw new UnauthorizedActionException("Unauthorized access to this job's applications");
         }
 
-        List<Application> applications =
-                applicationRepository.findByJobId(jobId);
+        List<Application> applications = applicationRepository.findByJobId(jobId);
 
         return applications.stream()
                 .map(app -> new ApplicationResponse(
                         app.getId(),
                         app.getCandidate().getId(),
                         app.getCandidate().getEmail(),
+                        app.getCandidate().getName() != null ? app.getCandidate().getName() : app.getCandidate().getEmail(),
                         app.getStatus(),
                         app.getAppliedAt()
                 ))

@@ -3,9 +3,20 @@ import { Link } from "react-router";
 import { Briefcase } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
+import { useAuth } from "../../contexts/AuthContext";
+import { LocalStorageKeys, getLocalStorageItem } from "../../utils/localStorage";
+
+function getDashboardPath(role: string): string {
+  if (role === "ADMIN") return "/admin";
+  if (role === "RECRUITER") return "/job-poster";
+  return "/job-seeker";
+}
 
 export function LandingNavbar() {
   const [scrolled, setScrolled] = useState(false);
+  const { user, logout } = useAuth();
+  const token = getLocalStorageItem<string | null>(LocalStorageKeys.TOKEN, null);
+  const isLoggedIn = !!token && !!user;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -22,8 +33,6 @@ export function LandingNavbar() {
     )}>
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex h-12 items-center justify-between">
-          
-          {/* Logo - Black Branding */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="bg-slate-950 p-2 rounded-xl group-hover:bg-indigo-600 transition-all duration-300 shadow-lg">
               <Briefcase className="h-5 w-5 text-white" />
@@ -33,7 +42,6 @@ export function LandingNavbar() {
             </span>
           </Link>
 
-          {/* Center Navigation Links */}
           <div className="hidden lg:flex items-center gap-1 bg-slate-950/5 p-1 rounded-full backdrop-blur-sm border border-slate-200/50">
             {["Find Jobs", "Companies", "About", "Pricing"].map((item) => (
               <Link 
@@ -46,12 +54,28 @@ export function LandingNavbar() {
             ))}
           </div>
 
-          {/* Right Action Button with Dropdown */}
-          <Link to="/auth">
-            <Button className="rounded-full bg-slate-950 hover:bg-indigo-600 text-white font-bold h-11 px-6 shadow-xl shadow-slate-200 transition-all hover:scale-105 active:scale-95 border-none">
-              Get Started
-            </Button>
-          </Link>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-3">
+              <Link to={getDashboardPath(user!.role)}>
+                <Button variant="outline" className="rounded-full font-bold h-11 px-5 border-slate-200">
+                  Dashboard
+                </Button>
+              </Link>
+              <Button 
+                onClick={logout}
+                variant="ghost"
+                className="rounded-full font-bold h-11 px-5 text-slate-600 hover:text-slate-950"
+              >
+                Log out
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth">
+              <Button className="rounded-full bg-slate-950 hover:bg-indigo-600 text-white font-bold h-11 px-6 shadow-xl shadow-slate-200 transition-all hover:scale-105 active:scale-95 border-none">
+                Get Started
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>

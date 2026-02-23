@@ -32,14 +32,10 @@ public ResponseEntity<String> apply(@PathVariable UUID jobId) {
     return ResponseEntity.ok("Application submitted successfully");
 }
 
-    @GetMapping("/jobs/{jobId}/applications/{recruiterId}")
-    public ResponseEntity<List<ApplicationResponse>> getApplications(
-            @PathVariable UUID jobId,
-            @PathVariable UUID recruiterId) {
-
-        return ResponseEntity.ok(
-                applicationService.getApplicationsForJob(jobId, recruiterId)
-        );
+    @GetMapping("/jobs/{jobId}")
+    public ResponseEntity<List<ApplicationResponse>> getApplicationsForJob(
+            @PathVariable UUID jobId) {
+        return ResponseEntity.ok(applicationService.getApplicationsForJob(jobId));
     }
 
 

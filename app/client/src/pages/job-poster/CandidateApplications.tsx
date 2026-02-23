@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { PortalTopbar } from "../../comoponents/PortalTopbar";
 import { Card, CardContent, CardHeader, CardTitle } from "../../comoponents/ui/card";
 import { Button } from "../../comoponents/ui/button";
@@ -10,8 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../comoponents/ui/select";
-import { Search, Filter, Sparkles, Star, CheckCircle, XCircle, Calendar } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../comoponents/ui/tabs";
 import {
   Table,
   TableBody,
@@ -20,123 +19,110 @@ import {
   TableHeader,
   TableRow,
 } from "../../comoponents/ui/table";
+import { Search, CheckCircle, XCircle } from "lucide-react";
+import api from "../../api/axios";
+import { toast } from "sonner";
 
-const mockCandidates = {
-  all: [
-    { 
-      id: 1, 
-      name: "Sarah Johnson", 
-      position: "Senior React Developer", 
-      aiScore: 92, 
-      experience: "6 years",
-      location: "San Francisco, CA",
-      applied: "Feb 4, 2024",
-      status: "New"
-    },
-    { 
-      id: 2, 
-      name: "Michael Chen", 
-      position: "Full Stack Engineer", 
-      aiScore: 88, 
-      experience: "5 years",
-      location: "Remote",
-      applied: "Feb 3, 2024",
-      status: "Screening"
-    },
-    { 
-      id: 3, 
-      name: "Emma Wilson", 
-      position: "Frontend Developer", 
-      aiScore: 85, 
-      experience: "4 years",
-      location: "New York, NY",
-      applied: "Feb 2, 2024",
-      status: "Interview"
-    },
-    { 
-      id: 4, 
-      name: "David Brown", 
-      position: "Senior React Developer", 
-      aiScore: 79, 
-      experience: "7 years",
-      location: "Austin, TX",
-      applied: "Feb 1, 2024",
-      status: "Shortlisted"
-    },
-    { 
-      id: 5, 
-      name: "Lisa Anderson", 
-      position: "Frontend Developer", 
-      aiScore: 91, 
-      experience: "5 years",
-      location: "Remote",
-      applied: "Jan 31, 2024",
-      status: "Offer"
-    },
-  ],
-  new: [
-    { 
-      id: 1, 
-      name: "Sarah Johnson", 
-      position: "Senior React Developer", 
-      aiScore: 92, 
-      experience: "6 years",
-      location: "San Francisco, CA",
-      applied: "Feb 4, 2024",
-      status: "New"
-    },
-  ],
-  shortlisted: [
-    { 
-      id: 4, 
-      name: "David Brown", 
-      position: "Senior React Developer", 
-      aiScore: 79, 
-      experience: "7 years",
-      location: "Austin, TX",
-      applied: "Feb 1, 2024",
-      status: "Shortlisted"
-    },
-  ],
-  interview: [
-    { 
-      id: 3, 
-      name: "Emma Wilson", 
-      position: "Frontend Developer", 
-      aiScore: 85, 
-      experience: "4 years",
-      location: "New York, NY",
-      applied: "Feb 2, 2024",
-      status: "Interview"
-    },
-  ],
-};
+interface JobOption {
+  id: string;
+  title: string;
+  companyName: string;
+}
+
+interface CandidateRow {
+  applicationId: string;
+  candidateId: string;
+  candidateEmail: string;
+  candidateName: string | null;
+  status: string;
+  appliedAt: string;
+}
 
 const getStatusBadgeStyle = (status: string) => {
   switch (status) {
-    case "New":
+    case "APPLIED":
+      return "bg-green-100 text-green-700";
+    case "SHORTLISTED":
       return "bg-blue-100 text-blue-700";
-    case "Screening":
-      return "bg-yellow-100 text-yellow-700";
-    case "Interview":
-      return "bg-purple-100 text-purple-700";
-    case "Shortlisted":
-      return "bg-green-100 text-green-700";
-    case "Offer":
-      return "bg-green-100 text-green-700";
+    case "REJECTED":
+      return "bg-red-100 text-red-700";
+    case "HIRED":
+      return "bg-emerald-100 text-emerald-700";
     default:
       return "bg-gray-100 text-gray-700";
   }
 };
 
-const getAIScoreBadgeStyle = (score: number) => {
-  if (score >= 90) return "bg-green-100 text-green-700";
-  if (score >= 80) return "bg-blue-100 text-blue-700";
-  if (score >= 70) return "bg-yellow-100 text-yellow-700";
-  return "bg-gray-100 text-gray-700";
-};
+const formatStatus = (s: string) =>
+  s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export function CandidateApplications() {
+  const [jobs, setJobs] = useState<JobOption[]>([]);
+  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  const [candidates, setCandidates] = useState<CandidateRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const loadJobs = async () => {
+    try {
+      const { data } = await api.get<{ content: JobOption[] }>("/jobs/recruiter?page=0&size=100");
+      const list = data.content ?? (Array.isArray(data) ? data : []);
+      const arr = Array.isArray(list) ? list : [];
+      setJobs(arr);
+      if (arr.length > 0 && !selectedJobId) setSelectedJobId(arr[0].id);
+    } catch {
+      setJobs([]);
+    }
+  };
+
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedJobId) {
+      setCandidates([]);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get<CandidateRow[]>(`/applications/jobs/${selectedJobId}`)
+      .then(({ data }) => {
+        if (!cancelled) setCandidates(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setCandidates([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedJobId]);
+
+  const updateStatus = async (applicationId: string, status: string) => {
+    try {
+      await api.patch(`/applications/${applicationId}/status`, { status });
+      toast.success("Status updated.");
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c.applicationId === applicationId ? { ...c, status } : c
+        )
+      );
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? "Failed to update");
+    }
+  };
+
+  const filtered = candidates.filter(
+    (c) =>
+      search === "" ||
+      [c.candidateEmail, c.candidateName].some(
+        (s) => s && s.toLowerCase().includes(search.toLowerCase())
+      )
+  );
+
   return (
     <>
       <PortalTopbar title="Candidates" subtitle="Review and manage applicants" />
@@ -146,107 +132,99 @@ export function CandidateApplications() {
             <CardTitle>Candidate Applications</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Filters */}
             <div className="flex gap-4 mb-6">
+              <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Select job" />
+                </SelectTrigger>
+                <SelectContent>
+                  {jobs.map((j) => (
+                    <SelectItem key={j.id} value={j.id}>
+                      {j.title} — {j.companyName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search candidates..." className="pl-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search candidates..."
+                  className="pl-10"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  <SelectItem value="react">React Developer</SelectItem>
-                  <SelectItem value="fullstack">Full Stack Engineer</SelectItem>
-                  <SelectItem value="frontend">Frontend Developer</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select defaultValue="score">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="score">AI Score (High to Low)</SelectItem>
-                  <SelectItem value="date">Application Date</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            {/* Tabs */}
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
-                <TabsTrigger value="all">All ({mockCandidates.all.length})</TabsTrigger>
-                <TabsTrigger value="new">New ({mockCandidates.new.length})</TabsTrigger>
-                <TabsTrigger value="shortlisted">Shortlisted ({mockCandidates.shortlisted.length})</TabsTrigger>
-                <TabsTrigger value="interview">Interview ({mockCandidates.interview.length})</TabsTrigger>
-              </TabsList>
-
-              {Object.entries(mockCandidates).map(([key, candidates]) => (
-                <TabsContent key={key} value={key}>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Candidate</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>AI Score</TableHead>
-                        <TableHead>Experience</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Applied</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {candidates.map((candidate) => (
-                        <TableRow key={candidate.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                <span className="text-sm font-medium text-blue-700">
-                                  {candidate.name.split(' ').map(n => n[0]).join('')}
-                                </span>
-                              </div>
-                              <span className="font-medium">{candidate.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{candidate.position}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className={getAIScoreBadgeStyle(candidate.aiScore)}>
-                                {candidate.aiScore}
-                              </Badge>
-                              <Sparkles className="h-4 w-4 text-blue-500" />
-                            </div>
-                          </TableCell>
-                          <TableCell>{candidate.experience}</TableCell>
-                          <TableCell>{candidate.location}</TableCell>
-                          <TableCell>{candidate.applied}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={getStatusBadgeStyle(candidate.status)}>
-                              {candidate.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Button variant="outline" size="sm">View</Button>
-                              <Button variant="ghost" size="sm" className="text-green-600">
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600">
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TabsContent>
-              ))}
-            </Tabs>
+            {loading ? (
+              <p className="text-gray-500 py-8">Loading…</p>
+            ) : selectedJobId && jobs.length === 0 ? (
+              <p className="text-gray-500 py-8">No jobs. Create a job first.</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-gray-500 py-8">No applications for this job yet.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Applied</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((c) => (
+                    <TableRow key={c.applicationId}>
+                      <TableCell className="font-medium">
+                        {c.candidateName || c.candidateEmail}
+                      </TableCell>
+                      <TableCell>{c.candidateEmail}</TableCell>
+                      <TableCell>
+                        {new Date(c.appliedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={getStatusBadgeStyle(c.status)}>
+                          {formatStatus(c.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {c.status !== "SHORTLISTED" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-green-600"
+                            onClick={() => updateStatus(c.applicationId, "SHORTLISTED")}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {c.status !== "REJECTED" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600"
+                            onClick={() => updateStatus(c.applicationId, "REJECTED")}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {c.status !== "HIRED" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-emerald-600"
+                            onClick={() => updateStatus(c.applicationId, "HIRED")}
+                          >
+                            Hire
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </main>

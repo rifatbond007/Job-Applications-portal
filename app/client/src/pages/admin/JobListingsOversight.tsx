@@ -1,74 +1,71 @@
+import { useState, useEffect } from "react";
 import { PortalTopbar } from "../../comoponents/PortalTopbar";
 import { Card, CardContent, CardHeader, CardTitle } from "../../comoponents/ui/card";
-import { Button } from "../../comoponents/ui/button";
 import { Badge } from "../../comoponents/ui/badge";
 import { Input } from "../../comoponents/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "../../comoponents/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../comoponents/ui/select";
-import { Search, Flag, Eye, CheckCircle, XCircle } from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../comoponents/ui/table";
+import { Search } from "lucide-react";
+import api from "../../api/axios";
 
-const mockJobListings = [
-  { 
-    id: 1, 
-    title: "Senior React Developer", 
-    company: "TechCorp Inc.", 
-    status: "Active",
-    applicants: 42,
-    posted: "2024-02-01",
-    flagged: false
-  },
-  { 
-    id: 2, 
-    title: "Product Manager", 
-    company: "StartupXYZ", 
-    status: "Flagged",
-    applicants: 18,
-    posted: "2024-02-03",
-    flagged: true
-  },
-  { 
-    id: 3, 
-    title: "Data Scientist", 
-    company: "DataCo", 
-    status: "Active",
-    applicants: 67,
-    posted: "2024-01-28",
-    flagged: false
-  },
-  { 
-    id: 4, 
-    title: "UX Designer", 
-    company: "DesignHub", 
-    status: "Under Review",
-    applicants: 31,
-    posted: "2024-02-05",
-    flagged: false
-  },
-  { 
-    id: 5, 
-    title: "Backend Engineer", 
-    company: "CloudSystems", 
-    status: "Active",
-    applicants: 54,
-    posted: "2024-01-25",
-    flagged: false
-  },
-];
+interface JobRow {
+  id: string;
+  title: string;
+  location: string;
+  salary: number | null;
+  companyName: string;
+  status: string;
+  createdAt: string;
+}
+
+const getStatusBadgeStyle = (status: string) => {
+  switch (status) {
+    case "OPEN":
+      return "bg-green-100 text-green-700";
+    case "CLOSED":
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
 
 export function JobListingsOversight() {
+  const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    api
+      .get<{ content: JobRow[] }>("/jobs/all?page=0&size=100")
+      .then(({ data }) => {
+        const list = data.content ?? (Array.isArray(data) ? data : []);
+        if (!cancelled) setJobs(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setJobs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const filtered = jobs.filter(
+    (j) =>
+      search === "" ||
+      [j.title, j.companyName].some((s) =>
+        s.toLowerCase().includes(search.toLowerCase())
+      )
+  );
+
   return (
     <>
       <PortalTopbar title="Job Listings Oversight" subtitle="Monitor and moderate job postings" />
@@ -78,79 +75,48 @@ export function JobListingsOversight() {
             <CardTitle>All Job Listings</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Filters */}
             <div className="flex gap-4 mb-6">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search job listings..." className="pl-10" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search jobs..."
+                  className="pl-10"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="flagged">Flagged</SelectItem>
-                  <SelectItem value="review">Under Review</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            {/* Job Listings Table */}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Applicants</TableHead>
-                  <TableHead>Posted Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockJobListings.map((job) => (
-                  <TableRow key={job.id}>
-                    <TableCell className="flex items-center gap-2">
-                      {job.flagged && <Flag className="h-4 w-4 text-red-500" />}
-                      {job.title}
-                    </TableCell>
-                    <TableCell>{job.company}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="secondary"
-                        className={
-                          job.status === "Active" 
-                            ? "bg-green-100 text-green-700" 
-                            : job.status === "Flagged"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }
-                      >
-                        {job.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{job.applicants}</TableCell>
-                    <TableCell>{job.posted}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-green-600">
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600">
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            {loading ? (
+              <p className="text-gray-500 py-8">Loading…</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Posted</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((job) => (
+                    <TableRow key={job.id}>
+                      <TableCell className="font-medium">{job.title}</TableCell>
+                      <TableCell>{job.companyName}</TableCell>
+                      <TableCell>{job.location || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={getStatusBadgeStyle(job.status)}>
+                          {job.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(job.createdAt).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </main>

@@ -15,6 +15,10 @@ public class User {
     @GeneratedValue
     private UUID id;
 
+    private String name;
+
+    private String location;
+
     @Column(unique = true, nullable = false)
     private String email;
 
@@ -26,6 +30,8 @@ public class User {
 
     private boolean isActive = true;
 
+    private boolean emailVerified = false;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public User() {}
@@ -33,6 +39,12 @@ public class User {
     public UUID getId() {
         return id;
     }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
 
     public String getEmail() {
         return email;
@@ -78,6 +90,9 @@ public class User {
     public void setActive(boolean active) {
         isActive = active;
     }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
 }
 

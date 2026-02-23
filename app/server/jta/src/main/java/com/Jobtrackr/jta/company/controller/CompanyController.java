@@ -31,7 +31,11 @@ public class CompanyController {
     public CompanyResponse assignRecruiter(
             @PathVariable UUID companyId,
             @PathVariable UUID userId) {
-
         return companyService.assignRecruiter(companyId, userId);
+    }
+
+    @PostMapping("/{companyId}/assign-me")
+    public CompanyResponse assignMeToCompany(@PathVariable UUID companyId) {
+        return companyService.assignCurrentUserToCompany(companyId);
     }
 }

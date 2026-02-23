@@ -23,12 +23,25 @@ public class JobController {
         this.jobService = jobService;
     }
 
-    @PostMapping("/{recruiterId}")
-    public JobResponse createJob(@PathVariable UUID recruiterId,
-                                 @RequestBody JobCreateRequest request) {
-
-        return jobService.createJob(recruiterId, request);
+    @PostMapping
+    public JobResponse createJob(@RequestBody JobCreateRequest request) {
+        return jobService.createJob(request);
     }
+
+    @GetMapping("/recruiter")
+    public ResponseEntity<Page<JobListResponse>> getMyJobs(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return ResponseEntity.ok(jobService.getJobsByRecruiter(pageable));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<Page<JobListResponse>> getAllJobs(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
+            Pageable pageable) {
+        return ResponseEntity.ok(jobService.getAllJobsAdmin(pageable));
+    }
+
     @GetMapping
     public ResponseEntity<Page<JobListResponse>> getOpenJobs(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
@@ -36,5 +49,13 @@ public class JobController {
 
         return ResponseEntity.ok(jobService.getOpenJobs(pageable));
     }
+    @PatchMapping("/{jobId}/close")
+    public ResponseEntity<String> closeJob(@PathVariable UUID jobId) {
+
+        jobService.closeJob(jobId);
+
+        return ResponseEntity.ok("Job closed successfully");
+    }
+
 
 }

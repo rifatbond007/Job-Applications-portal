@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
-import { Briefcase, ArrowLeft, Mail, Lock, User, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Briefcase, ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "../comoponents/ui/button";
 import { Input } from "../comoponents/ui/input";
 import { Label } from "../comoponents/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../comoponents/ui/tabs";
 import { cn } from "../lib/utils";
+import api from "../api/axios";
+import { useAuth, type AuthUser } from "../contexts/AuthContext";
 
 export function Auth() {
+  const { login } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -20,17 +23,128 @@ export function Auth() {
   }, []);
 
   // Form States
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [signupData, setSignupData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [resetSent, setResetSent] = useState(false);
+  const [loginData, setLoginData] = useState({
+    email: "",
+    password: "",
+  });
 
-  const handleLoginSubmit = (e: React.FormEvent) => { e.preventDefault(); console.log(loginData); };
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const [signupData, setSignupData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupData.password !== signupData.confirmPassword) return alert("Passwords do not match");
-    console.log(signupData);
+    setLoginLoading(true);
+    try {
+      const response = await api.post<{ token: string; user: AuthUser }>("/users/login", loginData);
+      const { token, user } = response.data;
+      if (!user) throw new Error("No user in response");
+      login(token, { id: user.id, name: user.name ?? null, email: user.email, role: user.role, location: user.location ?? null });
+    } catch (error: any) {
+      const msg = error.response?.data?.message ?? "";
+      if (msg === "EMAIL_NOT_VERIFIED") {
+        setPendingVerifyEmail(loginData.email);
+        setShowVerifyStep(true);
+        setVerifyCode("");
+        alert("Email not verified. Enter the 6-digit code we sent (or request a new one).");
+      } else {
+        alert(msg || "Invalid credentials");
+      }
+    } finally {
+      setLoginLoading(false);
+    }
   };
+
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [showVerifyStep, setShowVerifyStep] = useState(false);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const passwordHint = "Min 8 characters, 1 upper, 1 lower, 1 number, 1 special character (!@#$%^&* etc.)";
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (signupData.password !== signupData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+    setSignupLoading(true);
+    try {
+      await api.post("/users/register", {
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password,
+      });
+      await api.post("/users/request-email-verification", { email: signupData.email });
+      setPendingVerifyEmail(signupData.email);
+      setShowVerifyStep(true);
+      setVerifyCode("");
+    } catch (error: any) {
+      const msg = error.response?.data?.message ?? error.response?.data ?? "Registration failed";
+      alert(typeof msg === "string" ? msg : JSON.stringify(msg));
+    } finally {
+      setSignupLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingVerifyEmail || !verifyCode.trim()) return;
+    setVerifyLoading(true);
+    try {
+      await api.post("/users/verify-email", { email: pendingVerifyEmail, code: verifyCode.trim() });
+      alert("Email verified. You can now sign in.");
+      setShowVerifyStep(false);
+      setPendingVerifyEmail("");
+      setVerifyCode("");
+      setActiveTab("login");
+    } catch (error: any) {
+      alert(error.response?.data?.message ?? "Invalid or expired code.");
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!pendingVerifyEmail) return;
+    setResendLoading(true);
+    try {
+      await api.post("/users/request-email-verification", { email: pendingVerifyEmail });
+      alert("Verification code sent again. Check your email.");
+    } catch {
+      alert("Could not resend. Try again.");
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      alert("Please enter your email");
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const res = await api.post("/users/forgot-password", { email: forgotEmail.trim() });
+      alert(res.data?.message ?? "If an account exists with this email, you will receive a recovery link.");
+      setForgotEmail("");
+    } catch (error: any) {
+      alert(error.response?.data?.message ?? "Something went wrong. Try again.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col font-sans text-slate-900">
@@ -91,6 +205,35 @@ export function Auth() {
 
         {/* AUTH CARD */}
         <div className="bg-white rounded-[2.5rem] shadow-[0_32px_64px_-15px_rgba(0,0,0,0.5)] p-10 border border-slate-100">
+          {showVerifyStep ? (
+            <div className="space-y-6">
+              <header>
+                <h2 className="text-3xl font-black text-slate-950 tracking-tight">Verify your email</h2>
+                <p className="text-slate-500 text-sm font-medium mt-1">Enter the 6-digit code sent to {pendingVerifyEmail}</p>
+              </header>
+              <form onSubmit={handleVerifySubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Verification code</Label>
+                  <Input
+                    placeholder="000000"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
+                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium text-center text-lg tracking-widest"
+                  />
+                </div>
+                <Button type="submit" disabled={verifyLoading || verifyCode.length !== 6} className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl">
+                  {verifyLoading ? "Verifying…" : "Verify"}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={handleResendCode} disabled={resendLoading}>
+                  {resendLoading ? "Sending…" : "Resend code"}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={() => { setShowVerifyStep(false); setPendingVerifyEmail(""); setVerifyCode(""); }}>
+                  Back
+                </Button>
+              </form>
+            </div>
+          ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-10 bg-slate-100 p-1.5 rounded-2xl">
               <TabsTrigger value="login" className="rounded-xl font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm">Login</TabsTrigger>
@@ -139,8 +282,8 @@ export function Auth() {
                   </div>
                 </div>
 
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-200 text-base">
-                  Sign In
+                <Button type="submit" disabled={loginLoading} className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-200 text-base">
+                  {loginLoading ? "Signing in…" : "Sign In"}
                 </Button>
               </form>
 
@@ -165,32 +308,46 @@ export function Auth() {
               <form onSubmit={handleSignupSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Full Name</Label>
-                  <Input 
-                    placeholder="John Doe" 
+                  <Input
+                    placeholder="John Doe"
+                    value={signupData.name}
                     className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                    onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Email</Label>
-                  <Input 
-                    type="email" 
-                    placeholder="name@company.com" 
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="name@company.com"
+                    value={signupData.email}
                     className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Password</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="••••••••" 
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Password</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupData.password}
                     className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500">{passwordHint}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Confirm Password</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={signupData.confirmPassword}
+                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
+                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
                   />
                 </div>
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl mt-4">
-                  Create Account
+                <Button type="submit" disabled={signupLoading} className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl mt-4">
+                  {signupLoading ? "Creating…" : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
@@ -201,17 +358,22 @@ export function Auth() {
                 <h2 className="text-3xl font-black text-slate-950 tracking-tight">Lost access?</h2>
                 <p className="text-slate-500 text-sm font-medium mt-1">Enter your email for a recovery link</p>
               </header>
-              <div className="space-y-4">
-                <Input 
-                  placeholder="your@email.com" 
-                  className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium" 
+              <form onSubmit={handleForgotSubmit} className="space-y-4">
+                <Input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
+                  required
                 />
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl">
-                  Send Link
+                <Button type="submit" disabled={forgotLoading} className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl">
+                  {forgotLoading ? "Sending…" : "Send Link"}
                 </Button>
-              </div>
+              </form>
             </TabsContent>
           </Tabs>
+          )}
         </div>
 
         {/* FOOTER */}

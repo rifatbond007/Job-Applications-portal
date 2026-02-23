@@ -1,15 +1,15 @@
 package com.Jobtrackr.jta.user.dto;
 
 public class LoginResponse {
+    private String token;
+    private AuthUser user;
 
-        private String token;
-
-        public LoginResponse(String token) {
-            this.token = token;
-        }
-
-        public String getToken() {
-            return token;
-        }
+    public LoginResponse(String token, AuthUser user) {
+        this.token = token;
+        this.user = user;
     }
+
+    public String getToken() { return token; }
+    public AuthUser getUser() { return user; }
+}
 

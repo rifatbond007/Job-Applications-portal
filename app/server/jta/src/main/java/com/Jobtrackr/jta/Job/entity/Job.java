@@ -34,7 +34,7 @@ public class Job {
     private JobType type;
 
     @Enumerated(EnumType.STRING)
-    private JobStatus status;
+    private JobStatus status = JobStatus.OPEN;
 
     private LocalDateTime createdAt;
 

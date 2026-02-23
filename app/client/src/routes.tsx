@@ -1,4 +1,5 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
+import { ProtectedRoute } from "./comoponents/ProtectedRoute";
 
 // Pages
 import { Home } from "./pages/Home";
@@ -32,51 +33,58 @@ import { JobPosterAnalytics } from "./pages/job-poster/JobPosterAnalytics";
 import { JobPosterSettings } from "./pages/job-poster/JobPosterSettings";
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    Component: Home,
-  },
-  {
-    path: "/auth",
-    Component: Auth,
-  },
-  // Admin Portal Routes
+  { path: "/", Component: Home },
+  { path: "/auth", Component: Auth },
   {
     path: "/admin",
-    Component: AdminLayout,
+    element: <ProtectedRoute allowedRole="ADMIN" />,
     children: [
-      { index: true, Component: AdminDashboard },
-      { path: "users", Component: UserManagement },
-      { path: "jobs", Component: JobListingsOversight },
-      { path: "ai-monitor", Component: AIUsageMonitor },
-      { path: "analytics", Component: SystemAnalytics },
-      { path: "settings", Component: AdminSettings },
+      {
+        element: <AdminLayout />,
+        children: [
+          { index: true, Component: AdminDashboard },
+          { path: "users", Component: UserManagement },
+          { path: "jobs", Component: JobListingsOversight },
+          { path: "ai-monitor", Component: AIUsageMonitor },
+          { path: "analytics", Component: SystemAnalytics },
+          { path: "settings", Component: AdminSettings },
+        ],
+      },
     ],
   },
-  // Job Seeker Portal Routes
   {
     path: "/job-seeker",
-    Component: JobSeekerLayout,
+    element: <ProtectedRoute allowedRole="CANDIDATE" />,
     children: [
-      { index: true, Component: JobSeekerDashboard },
-      { path: "applications", Component: Applications },
-      { path: "resume", Component: ResumeManager },
-      { path: "ai-assistant", Component: AIAssistant },
-      { path: "analytics", Component: JobSeekerAnalytics },
-      { path: "settings", Component: JobSeekerSettings },
+      {
+        element: <JobSeekerLayout />,
+        children: [
+          { index: true, Component: JobSeekerDashboard },
+          { path: "applications", Component: Applications },
+          { path: "resume", Component: ResumeManager },
+          { path: "ai-assistant", Component: AIAssistant },
+          { path: "analytics", Component: JobSeekerAnalytics },
+          { path: "settings", Component: JobSeekerSettings },
+        ],
+      },
     ],
   },
-  // Job Poster Portal Routes
   {
     path: "/job-poster",
-    Component: JobPosterLayout,
+    element: <ProtectedRoute allowedRole="RECRUITER" />,
     children: [
-      { index: true, Component: JobPosterDashboard },
-      { path: "jobs", Component: JobListings },
-      { path: "candidates", Component: CandidateApplications },
-      { path: "resumes", Component: ResumeViewer },
-      { path: "analytics", Component: JobPosterAnalytics },
-      { path: "settings", Component: JobPosterSettings },
+      {
+        element: <JobPosterLayout />,
+        children: [
+          { index: true, Component: JobPosterDashboard },
+          { path: "jobs", Component: JobListings },
+          { path: "candidates", Component: CandidateApplications },
+          { path: "resumes", Component: ResumeViewer },
+          { path: "analytics", Component: JobPosterAnalytics },
+          { path: "settings", Component: JobPosterSettings },
+        ],
+      },
     ],
   },
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);

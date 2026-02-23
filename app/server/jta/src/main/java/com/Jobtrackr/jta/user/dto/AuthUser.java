@@ -4,25 +4,24 @@ import com.Jobtrackr.jta.user.entity.Role;
 
 import java.util.UUID;
 
-public class UserResponse {
-
+public class AuthUser {
     private UUID id;
     private String name;
     private String email;
     private Role role;
-    private boolean isActive;
+    private String location;
 
-    public UserResponse(UUID id, String name, String email, Role role, boolean isActive) {
+    public AuthUser(UUID id, String name, String email, Role role, String location) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.role = role;
-        this.isActive = isActive;
+        this.location = location;
     }
 
     public UUID getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public Role getRole() { return role; }
-    public boolean isActive() { return isActive; }
+    public String getLocation() { return location; }
 }

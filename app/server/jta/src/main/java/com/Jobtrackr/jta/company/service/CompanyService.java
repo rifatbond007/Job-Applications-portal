@@ -10,6 +10,8 @@ import com.Jobtrackr.jta.exception.UnauthorizedActionException;
 import com.Jobtrackr.jta.user.entity.Role;
 import com.Jobtrackr.jta.user.entity.User;
 import com.Jobtrackr.jta.user.repository.UserRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -82,5 +84,16 @@ public class CompanyService {
                 company.getDescription(),
                 company.getLocation()
         );
+    }
+
+    @Transactional
+    public CompanyResponse assignCurrentUserToCompany(UUID companyId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        if (user.getRole() != Role.RECRUITER) {
+            throw new UnauthorizedActionException("Only recruiters can be assigned to a company");
+        }
+        return assignRecruiter(companyId, user.getId());
     }
 }

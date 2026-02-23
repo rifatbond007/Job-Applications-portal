@@ -10,8 +10,29 @@ import { Button } from "../ui/button";
 import { EmptyState } from "../EmptyState";
 import { MOCK_JOBS, type JobListing } from "../../data/mockJobs";
 import { cn } from "@/lib/utils";
+import api from "../../api/axios";
+import { useAuth } from "../../contexts/AuthContext";
+import { getLocalStorageItem, LocalStorageKeys } from "../../utils/localStorage";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 6;
+
+function mapApiJobToListing(j: { id: string; title: string; companyName: string; location: string; salary: number | null; createdAt: string }): JobListing {
+  const sal = j.salary ?? 0;
+  return {
+    id: j.id,
+    title: j.title,
+    company: j.companyName,
+    location: j.location || "Remote",
+    locationType: "Remote",
+    department: "General",
+    salary: { min: sal, max: sal || 0, currency: "USD" },
+    isNew: true,
+    description: "",
+    requirements: [],
+    postedDate: j.createdAt,
+  };
+}
 
 export function LandingPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -21,39 +42,47 @@ export function LandingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [isApplicationOpen, setIsApplicationOpen] = useState(false);
+  const [apiJobs, setApiJobs] = useState<JobListing[]>([]);
+  const { user } = useAuth();
+  const token = getLocalStorageItem<string | null>(LocalStorageKeys.TOKEN, null);
+  const isCandidate = !!token && user?.role === "CANDIDATE";
 
   const mockApplications = [
-    {
-      jobTitle: "Senior Frontend Engineer",
-      company: "TechCorp Inc.",
-      status: "interviewing" as const,
-      appliedDate: "3 days ago",
-      nextStep: "Technical interview on Feb 12",
-    },
-    {
-      jobTitle: "Product Designer",
-      company: "DesignHub",
-      status: "reviewing" as const,
-      appliedDate: "1 week ago",
-    },
+    { jobTitle: "Senior Frontend Engineer", company: "TechCorp Inc.", status: "interviewing" as const, appliedDate: "3 days ago", nextStep: "Technical interview on Feb 12" },
+    { jobTitle: "Product Designer", company: "DesignHub", status: "reviewing" as const, appliedDate: "1 week ago" },
   ];
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
+    api.get<{ content: unknown[] }>("/jobs?page=0&size=50").then(({ data }) => {
+      const content = data.content ?? [];
+      const list = content.map((j: any) => mapApiJobToListing({
+        id: j.id,
+        title: j.title,
+        companyName: j.companyName,
+        location: j.location,
+        salary: j.salary,
+        createdAt: j.createdAt,
+      }));
+      setApiJobs(list);
+    }).catch(() => setApiJobs([]));
   }, []);
 
+  const allJobs = useMemo(() => (apiJobs.length > 0 ? apiJobs : MOCK_JOBS), [apiJobs]);
+
+  useEffect(() => {
+    const t = apiJobs.length > 0 ? 0 : 1000;
+    const timer = setTimeout(() => setIsLoading(false), t);
+    return () => clearTimeout(timer);
+  }, [apiJobs.length]);
+
   const filteredJobs = useMemo(() => {
-    return MOCK_JOBS.filter((job) => {
-      const matchesSearch = searchTerm === "" || 
-        [job.title, job.company, job.description].some(field => 
-          field.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+    return allJobs.filter((job) => {
+      const matchesSearch = searchTerm === "" || [job.title, job.company, job.description].some((field) => String(field).toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesDepartment = selectedDepartment === "All Departments" || job.department === selectedDepartment;
       const matchesLocationType = selectedLocationType === "All Types" || job.locationType === selectedLocationType;
       return matchesSearch && matchesDepartment && matchesLocationType;
     });
-  }, [searchTerm, selectedDepartment, selectedLocationType]);
+  }, [allJobs, searchTerm, selectedDepartment, selectedLocationType]);
 
   const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE);
   const paginatedJobs = filteredJobs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -63,13 +92,25 @@ export function LandingPage() {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      document.getElementById('job-feed')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById("job-feed")?.scrollIntoView({ behavior: "smooth" });
     }, 500);
   };
 
-  const handleApply = (jobId: string) => {
-    const job = MOCK_JOBS.find((j) => j.id === jobId);
-    if (job) { setSelectedJob(job); setIsApplicationOpen(true); }
+  const handleApply = async (jobId: string) => {
+    const job = allJobs.find((j) => j.id === jobId);
+    if (!job) return;
+    if (isCandidate) {
+      try {
+        await api.post(`/applications/jobs/${jobId}/apply`);
+        toast.success("Application submitted.");
+      } catch (err: any) {
+        const msg = err.response?.data?.message ?? "Apply failed";
+        toast.error(msg);
+      }
+      return;
+    }
+    setSelectedJob(job);
+    setIsApplicationOpen(true);
   };
 
   const handlePageChange = (page: number) => {

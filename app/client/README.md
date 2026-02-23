@@ -41,9 +41,9 @@ npm run test
 
 ## Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend API base URL | `http://localhost:8080/api` |
-| `VITE_APP_NAME` | Application display name | `JAT Tracker` |
+| Variable | Description | Example                     |
+|----------|-------------|-----------------------------|
+| `VITE_API_URL` | Backend API base URL | `http://localhost:8082/api` |
+| `VITE_APP_NAME` | Application display name | `JAT Tracker`               |
 
 See `.env.example` for the full list.

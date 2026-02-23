@@ -5,6 +5,8 @@
 export const LocalStorageKeys = {
   SAVED_JOBS: "savedJobs",
   APPLICATION_DRAFT: "applicationDraft",
+  TOKEN: "token",
+  USER: "user",
 } as const;
 
 /**
