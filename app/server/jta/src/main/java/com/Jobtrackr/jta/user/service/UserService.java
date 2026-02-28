@@ -74,8 +74,40 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole() != null ? request.getRole() : Role.CANDIDATE);
         user.setLocation(null);
+        user.setEmailVerified(false); // Default to false
 
         User savedUser = userRepository.save(user);
+
+        // Automatically send verification email after registration
+        String code = String.format("%06d",
+                new java.util.Random().nextInt(1_000_000));
+
+        Instant expiresAt =
+                Instant.now().plusSeconds(EMAIL_OTP_VALID_MINUTES * 60L);
+
+        emailVerificationTokenRepository.save(
+                new EmailVerificationToken(code, savedUser, expiresAt)
+        );
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(savedUser.getEmail());
+            message.setSubject("JobTracker Email Verification Code");
+            message.setText(
+                    "Hello " + savedUser.getName() + ",\n\n" +
+                            "Your verification code is: " + code + "\n\n" +
+                            "This code will expire in " + EMAIL_OTP_VALID_MINUTES + " minutes."
+            );
+
+            mailSender.send(message);
+
+            System.out.println("Verification email sent to: " + savedUser.getEmail());
+            System.out.println("Verification code: " + code); // For development
+
+        } catch (Exception e) {
+            // Don't fail registration if email fails, but log it
+            System.err.println("Failed to send verification email: " + e.getMessage());
+        }
 
         return new UserResponse(
                 savedUser.getId(),
