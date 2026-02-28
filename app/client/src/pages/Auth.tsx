@@ -1,17 +1,24 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Briefcase, ArrowLeft, Mail, Lock, User, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { Button } from "../comoponents/ui/button";
 import { Input } from "../comoponents/ui/input";
 import { Label } from "../comoponents/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../comoponents/ui/tabs";
 import { cn } from "../lib/utils";
+import { authService, type LoginRequest, type RegisterRequest } from "../services/authService";
 
 export function Auth() {
   const [activeTab, setActiveTab] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
+  const [otp, setOtp] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -25,11 +32,89 @@ export function Auth() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => { e.preventDefault(); console.log(loginData); };
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupData.password !== signupData.confirmPassword) return alert("Passwords do not match");
-    console.log(signupData);
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      const response = await authService.login(loginData);
+      setSuccess("Login successful! Redirecting...");
+      setTimeout(() => {
+        // Redirect based on user role
+        if (response.user.role === 'ADMIN') {
+          navigate('/admin');
+        } else if (response.user.role === 'JOB_POSTER') {
+          navigate('/job-poster');
+        } else {
+          navigate('/job-seeker');
+        }
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    if (signupData.password !== signupData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    
+    if (signupData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      await authService.register(signupData);
+      setSuccess("Registration successful! Please check your email for verification code.");
+      setShowOtpVerification(true);
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      await authService.verifyEmail({ email: signupData.email, otp });
+      setSuccess("Email verified! You can now login.");
+      setShowOtpVerification(false);
+      setActiveTab("login");
+    } catch (err: any) {
+      setError(err.message || "OTP verification failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      await authService.forgotPassword(forgotEmail);
+      setSuccess("If an account exists with this email, you will receive a recovery link.");
+      setResetSent(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to send reset link");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -105,6 +190,18 @@ export function Auth() {
                 <p className="text-slate-500 text-sm font-medium mt-1">Enter your details to access your dashboard</p>
               </header>
 
+              {/* Error and Success Messages */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                  {success}
+                </div>
+              )}
+
               <form onSubmit={handleLoginSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Email Address</Label>
@@ -139,8 +236,12 @@ export function Auth() {
                   </div>
                 </div>
 
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-200 text-base">
-                  Sign In
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl transition-all shadow-xl shadow-slate-200 text-base disabled:opacity-50"
+                >
+                  {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
 
@@ -162,35 +263,87 @@ export function Auth() {
                 <h2 className="text-3xl font-black text-slate-950 tracking-tight">Create account</h2>
                 <p className="text-slate-500 text-sm font-medium mt-1">Start your journey with us today</p>
               </header>
+              
+              {/* Error and Success Messages */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                  {success}
+                </div>
+              )}
+              
               <form onSubmit={handleSignupSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Full Name</Label>
-                  <Input 
-                    placeholder="John Doe" 
-                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, name: e.target.value})}
-                  />
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      placeholder="John Doe" 
+                      className="pl-12 h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium"
+                      value={signupData.name}
+                      onChange={(e) => setSignupData({...signupData, name: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Email</Label>
-                  <Input 
-                    type="email" 
-                    placeholder="name@company.com" 
-                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, email: e.target.value})}
-                  />
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      type="email" 
+                      placeholder="name@company.com" 
+                      className="pl-12 h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium"
+                      value={signupData.email}
+                      onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                    <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Password</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="••••••••" 
-                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium"
-                    onChange={(e) => setSignupData({...signupData, password: e.target.value})}
-                  />
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-12 pr-12 h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium"
+                      value={signupData.password}
+                      onChange={(e) => setSignupData({...signupData, password: e.target.value})}
+                      required
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl mt-4">
-                  Create Account
+                <div className="space-y-2">
+                   <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Input 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-12 pr-12 h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium"
+                      value={signupData.confirmPassword}
+                      onChange={(e) => setSignupData({...signupData, confirmPassword: e.target.value})}
+                      required
+                    />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950">
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl mt-4 disabled:opacity-50"
+                >
+                  {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
               </form>
             </TabsContent>
@@ -201,21 +354,46 @@ export function Auth() {
                 <h2 className="text-3xl font-black text-slate-950 tracking-tight">Lost access?</h2>
                 <p className="text-slate-500 text-sm font-medium mt-1">Enter your email for a recovery link</p>
               </header>
-              <div className="space-y-4">
-                <Input 
-                  placeholder="your@email.com" 
-                  className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 px-4 font-medium" 
-                />
-                <Button className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl">
-                  Send Link
+              
+              {/* Error and Success Messages */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+                  {success}
+                </div>
+              )}
+              
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input 
+                    type="email"
+                    placeholder="your@email.com" 
+                    className="pl-12 h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-14 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl disabled:opacity-50"
+                >
+                  {isLoading ? "Sending..." : "Send Link"}
                 </Button>
-              </div>
+              </form>
             </TabsContent>
           </Tabs>
         </div>
 
         {/* FOOTER */}
         <div className="text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-10 space-y-2">
+          <p> 2026 JobTracker • <a href="#" className="text-slate-600 hover:text-slate-950 transition-colors">Privacy Policy</a> • <a href="#" className="text-slate-600 hover:text-slate-950 transition-colors">Terms of Service</a></p>
           <p>© 2026 JobTracker • <a href="#" className="text-slate-600 hover:text-slate-950 transition-colors">Privacy Policy</a> • <a href="#" className="text-slate-600 hover:text-slate-950 transition-colors">Terms of Service</a></p>
         </div>
       </div>
@@ -278,6 +456,73 @@ export function Auth() {
           </div>
         </div>
       </footer>
+
+      {/* OTP VERIFICATION MODAL */}
+      {showOtpVerification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <header className="text-center mb-6">
+              <h2 className="text-2xl font-black text-slate-950 tracking-tight">Verify Email</h2>
+              <p className="text-slate-500 text-sm font-medium mt-2">
+                Enter the verification code sent to {signupData.email}
+              </p>
+            </header>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm mb-4">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleOtpVerification} className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400 ml-1">Verification Code</Label>
+                <Input
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  className="h-14 rounded-2xl border-slate-200 bg-slate-50/50 font-medium text-center text-lg"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowOtpVerification(false);
+                    setError("");
+                    setOtp("");
+                  }}
+                  className="flex-1 h-12 rounded-2xl font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 h-12 bg-slate-950 hover:bg-indigo-600 text-white font-bold rounded-2xl disabled:opacity-50"
+                >
+                  {isLoading ? "Verifying..." : "Verify"}
+                </Button>
+              </div>
+            </form>
+
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => authService.requestEmailVerification(signupData.email)}
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                Didn't receive the code? Resend
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

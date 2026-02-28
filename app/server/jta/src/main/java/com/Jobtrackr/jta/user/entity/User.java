@@ -2,7 +2,6 @@ package com.Jobtrackr.jta.user.entity;
 
 import com.Jobtrackr.jta.company.entity.Company;
 import jakarta.persistence.*;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -62,19 +61,27 @@ public class User {
         return isActive;
     }
 
-    @Setter
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;
+
+    public Company getCompany() {
+        return company;
+    }
+
+    public void setCompany(Company company) {
+        this.company = company;
+    }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
 
-    public Company getCompany() {
-        return company;
-    }
     public void setEmail(String email) {
         this.email = email;
     }
@@ -85,10 +92,6 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
-    }
-
-    public void setActive(boolean active) {
-        isActive = active;
     }
 
     public boolean isEmailVerified() { return emailVerified; }
